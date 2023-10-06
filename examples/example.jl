@@ -6,6 +6,10 @@
 using PyPlot
 using IterativeSolvers
 using SpecialFunctions
+using Distributed
+using SharedArrays
+using SparseArrays
+using FFTW
 
 include("../src/FastConvolution.jl")
 include("../src/Preconditioner.jl")
@@ -15,7 +19,7 @@ include("../src/Preconditioner.jl")
 # libraries (please set them to match the number of
 # physical cores in your system)
 FFTW.set_num_threads(4);
-BLAS.set_num_threads(4);
+#BLAS.set_num_threads(4);
 
 
 #Defining Omega
@@ -28,8 +32,8 @@ x = collect(-a/2:h:a/2)
 y = collect(-a/2:h:a/2)
 (n,m) = length(x), length(y)
 N = n*m
-X = repmat(x, 1, m)[:]
-Y = repmat(y', n,1)[:]
+X = repeat(x, 1, m)[:]
+Y = repeat(y', n,1)[:]
 # we solve \triangle u + k^2(1 + nu(x))u = 0
 
 # We use the modified quadrature in Ruan and Rohklin
@@ -61,10 +65,11 @@ rhs = -k^2*FFTconvolution(fastconv, nu(X,Y).*u_inc) ;
 #rhs = u_inc;
 
 # allocating the solution
-u = zeros(Complex128,N);
+u = zeros(Complex{Float64},N);
 
 # solving the system using GMRES
-@time info =  gmres!(u, fastconv, rhs, Pl=precond, log = true)
+@time info =  gmres!(u, fastconv, rhs, log = true)
+#@time info =  gmres!(u, fastconv, rhs, Pl=precond, log = true)
 #println(info[2].residuals[:])
 
 # plotting the solution
